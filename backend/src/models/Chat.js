@@ -1,4 +1,5 @@
-const mongoose = require('mongoose');
+// backend/src/models/Chat.js
+import mongoose from 'mongoose';
 
 const MessageSchema = new mongoose.Schema({
   sender: { type: String, enum: ['customer', 'ai', 'agent'], required: true },
@@ -17,4 +18,4 @@ const ChatSchema = new mongoose.Schema({
 // Índice compuesto para que buscar un chat por teléfono de un cliente de X tienda sea instantáneo
 ChatSchema.index({ tenantId: 1, customerPhone: 1 }, { unique: true });
 
-module.exports = mongoose.model('Chat', ChatSchema);
+export default mongoose.model('Chat', ChatSchema);
