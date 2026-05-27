@@ -1,1 +1,80 @@
 @import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-dron-blue: #3483fa;
+  --color-dron-blue-light: #60a5fa;
+  
+  /* Azul Slate exacto del Navbar */
+  --color-bg-light: #f8fafc;
+  --color-bg-dark: #1e293b; 
+  
+  --color-text-light: #0f172a;
+  --color-text-dark: #f8fafc;
+}
+
+@layer base {
+  html {
+    @apply antialiased scroll-smooth transition-colors duration-500;
+  }
+  
+  body {
+    @apply min-h-screen bg-[var(--color-bg-light)] text-[var(--color-text-light)];
+    font-family: inherit;
+  }
+
+  /* FORZAMOS EL AZUL SLATE EN TODO EL BODY */
+  .dark body {
+    background-color: var(--color-bg-dark) !important;
+    color: var(--color-text-dark);
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(52, 131, 250, 0.12) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(15, 23, 42, 0.3) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+}
+
+/* --- COMPONENTES ULTRA-TRASLÚCIDOS --- */
+.glass-effect {
+  @apply backdrop-blur-xl border transition-all duration-500;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-color: rgba(0, 0, 0, 0.05);
+}
+
+.dark .glass-effect {
+  background-color: rgba(30, 41, 59, 0.01) !important; 
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.2);
+}
+
+/* Bordes adaptativos pro para usar en tus componentes */
+.border-adapt {
+  border-color: rgba(0, 0, 0, 0.08);
+}
+.dark .border-adapt {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Botones corregidos */
+.btn-primary {
+  @apply px-6 py-3 bg-dron-blue text-white font-black uppercase tracking-widest rounded-2xl 
+         transition-all duration-300 shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-95;
+}
+
+.dark .btn-primary {
+  background-color: #60a5fa;
+  color: #0f172a;
+  @apply shadow-blue-400/20;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-400/20 dark:bg-blue-400/20 rounded-full hover:bg-blue-500/50;
+}

@@ -1,122 +1,48 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+// frontend/src/App.jsx
+import React, { useEffect } from 'react';
+import { Navbar } from './components/layout/Navbar.jsx';
+import { Sidebar } from './components/layout/Sidebar.jsx';
+import { ChatList } from './components/chat/ChatList.jsx';
+import { ChatWindow } from './components/chat/ChatWindow.jsx';
+import  {useChatStore} from './store/useChatStore.js'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { setChats } = useChatStore();
+
+  // Simulamos la carga inicial en el store de Zustand
+  useEffect(() => {
+    const mockChats = [
+      {
+        id: "6a16e86b3932787496d7c4d1",
+        tenantId: "6a16e86bbdc9dd4ad1824c67",
+        customerPhone: "549381XXXXXXX",
+        customerName: "Lautaro",
+        messages: [
+          { sender: "customer", text: "Hola pa, ¿pudiste armar el webhook?", timestamp: new Date() }
+        ],
+        updatedAt: new Date()
+      }
+    ];
+    setChats(mockChats);
+  }, [setChats]);
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="min-h-screen flex flex-col font-sans transition-colors duration-300 bg-white text-slate-800 dark:bg-slate-900 dark:text-slate-100">
+      <Navbar />
+      
+      <div className="flex flex-1">
+        <Sidebar />
+        
+        <main className="flex-1 p-6 bg-slate-100/50 dark:bg-slate-900/40 transition-colors duration-300 flex gap-6">
+          {/* Componente de la lista */}
+          <ChatList />
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+          {/* Componente del chat abierto */}
+          <ChatWindow />
+        </main>
+      </div>
+    </div>
+  );
 }
 
-export default App
+export default App;
