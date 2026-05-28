@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import webhookRoutes from './src/routes/webhookRoutes.js';
+import chatRoutes from './src/routes/chatRoutes.js';
 import { dbConnect } from './src/config/db.js'
 
 // Cargar variables de entorno
@@ -20,6 +21,7 @@ dbConnect();// Clave para leer los JSON que mandará Meta mas adelante
 
 // Enlazar las rutas del webhook bajo el prefijo /api
 app.use('/api', webhookRoutes);
+app.use('/api/chats', chatRoutes);
 
 // Ruta de prueba por si querés entrar desde el navegador
 app.get('/', (req, res) => {

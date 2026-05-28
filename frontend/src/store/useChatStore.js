@@ -1,4 +1,7 @@
+// frontend/src/store/useChatStore.js
 import { create } from 'zustand';
+// 🚀 SOLUCIÓN: Agregamos las llaves en la importación nombrada
+import { chatService } from '../services/chatService.js'; 
 
 export const useChatStore = create((set) => ({
   chats: [],
@@ -6,13 +9,19 @@ export const useChatStore = create((set) => ({
   loading: false,
   error: null,
 
-  // Setear la lista completa de chats (cuando los traigamos de la API del backend)
   setChats: (chats) => set({ chats }),
-
-  // Seleccionar un chat para abrirlo en la pantalla central
   setActiveChat: (chat) => set({ activeChat: chat }),
 
-  // Agregar un mensaje nuevo en tiempo real (cuando llegue por el webhook)
+  fetchChats: async (tenantId) => {
+    set({ loading: true, error: null });
+    try {
+      const data = await chatService.getChatsByTenant(tenantId);
+      set({ chats: data, loading: false });
+    } catch (err) {
+      set({ error: 'No se pudieron cargar los chats desde el servidor', loading: false });
+    }
+  },
+
   addMessageToChat: (tenantId, customerPhone, message) => {
     set((state) => {
       const updatedChats = state.chats.map((chat) => {

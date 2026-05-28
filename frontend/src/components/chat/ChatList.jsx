@@ -1,9 +1,11 @@
-// frontend/src/components/ChatList.jsx
+// frontend/src/components/chat/ChatList.jsx
 import React from 'react';
 import { useChatStore } from '../../store/useChatStore.js';
 
 export const ChatList = () => {
-  const { chats, activeChat, setActiveChat } = useChatStore();
+  const chats = useChatStore((state) => state.chats);
+  const activeChat = useChatStore((state) => state.activeChat);
+  const setActiveChat = useChatStore((state) => state.setActiveChat);
 
   return (
     <section className="w-80 h-[calc(100vh-6rem)] rounded-2xl glass-effect border-adapt p-4 flex flex-col gap-3">
@@ -13,10 +15,12 @@ export const ChatList = () => {
       
       <div className="flex flex-col gap-2 overflow-y-auto flex-1 pr-1">
         {chats.map((chat) => {
-          const isSelected = activeChat?.id === chat.id;
+          // 🚀 SOLUCIÓN: Usamos chat._id que es el identificador nativo de MongoDB Atlas
+          const isSelected = activeChat?._id === chat._id;
+          
           return (
             <button
-              key={chat.id}
+              key={chat._id} // <─── Identidad única para que React no se queje
               onClick={() => setActiveChat(chat)}
               className={`w-full p-3 rounded-xl border border-adapt text-left transition-all duration-200
                 ${isSelected 
@@ -29,7 +33,9 @@ export const ChatList = () => {
                 <span className="text-[10px] text-slate-400">Ahora</span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                {chat.messages[chat.messages.length - 1]?.text}
+                {chat.messages && chat.messages.length > 0 
+                  ? chat.messages[chat.messages.length - 1]?.text 
+                  : 'Sin mensajes'}
               </p>
             </button>
           );
