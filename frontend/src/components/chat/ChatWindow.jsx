@@ -47,20 +47,31 @@ export const ChatWindow = () => {
 
         {/* Mensajes */}
         <div className="flex-1 my-4 overflow-y-auto flex flex-col gap-3 pr-2">
-          {activeChat.messages && activeChat.messages.map((msg, idx) => (
-            <div 
-              key={idx} 
-              className={`max-w-[70%] p-3 rounded-2xl text-sm shadow-sm transition-all duration-300
-                ${msg.sender === 'customer' 
-                  ? 'bg-white/80 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 self-start rounded-tl-none border border-adapt' 
-                  : 'bg-dron-blue text-white self-end rounded-tr-none'
-                }`}
-            >
-              {msg.text}
-            </div>
-          ))}
-        </div>
+          {activeChat.messages && activeChat.messages.map((msg, idx) => {
+            const isCustomer = msg.sender === 'customer';
+            const isBot = msg.sender === 'bot';
 
+            return (
+              <div 
+                key={idx} 
+                className={`max-w-[75%] min-w-[160px] p-3 rounded-2xl text-sm shadow-sm transition-all duration-300 break-words flex flex-col gap-1
+                  ${isCustomer 
+                    ? 'bg-white/80 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 self-start rounded-tl-none border border-adapt' 
+                    : isBot
+                      ? 'bg-blue-600/10 border border-dron-blue/20 text-slate-800 dark:text-slate-100 self-end rounded-tr-none'
+                      : 'bg-dron-blue text-white self-end rounded-tr-none'
+                  }`}
+              >
+                {isBot && (
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-dron-blue dark:text-dron-blue-light flex items-center gap-1 select-none">
+                    🤖 Asistente IA
+                  </span>
+                )}
+                <p className="leading-relaxed text-left whitespace-pre-wrap">{msg.text}</p>
+              </div>
+            );
+          })}
+        </div>
         {/* Input Formulario */}
         <form onSubmit={handleSend} className="flex gap-2">
           <input 

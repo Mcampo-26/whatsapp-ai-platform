@@ -1,6 +1,7 @@
 // backend/src/controllers/webhookController.js
 import Chat from '../models/Chat.js'; 
 import Tenant from '../models/Tenant.js';
+import { handleBotAutomationFlow } from '../services/botFlowService.js'; // 🚀 NUEVO SERVICE MODULAR
 
 /**
  * Verificación del Webhook (Método GET)
@@ -115,24 +116,28 @@ export const receiveMessage = async (req, res) => {
         }
       },
       { 
-        returnDocument: 'after', // <─── Esto reemplaza al 'new: true' en las versiones nuevas
+        returnDocument: 'after', // <─── Esto reemplaza al 'new: true' en las versiones Crypto/Mongo modernas
         upsert: true 
       }
     );
 
     console.log(`✅ Registro guardado exitosamente en Mongo. Chat ID del sistema: ${updatedChat._id}`);
 
-    // 🚀 EMISIÓN DE WEBCOCKET EN TIEMPO REAL
-    // Rescatamos la instancia global de 'io' que dejamos colgada de la 'app' en index.js
+    // 🚀 EMISIÓN DE WEBCOCKET EN TIEMPO REAL (Mensaje del Cliente)
     const io = req.app.get('io');
     if (io) {
       console.log(`📡 Emitiendo newMessage vía Socket para tenant: ${tenant._id}`);
       io.emit('newMessage', {
-        tenantId: tenant._id.toString(), // Convertimos el ObjectId a string plano para Zustand
+        tenantId: tenant._id.toString(),
         customerPhone: customerPhone,
         message: nuevoMensajeObj
       });
     }
+
+    // 🧠 DISPARO DEL FLUJO DE INTELIGENCIA ARTIFICIAL DE FORMA PASIVA
+    // Al no usar un 'await' acá, el controlador le responde de inmediato 200 OK a Meta, 
+    // y la IA se procesa de fondo en un hilo secundario de forma súper veloz. ¡Arquitectura de nivel senior!
+    handleBotAutomationFlow(io, tenant, customerPhone, messageBody);
 
     return res.status(200).send('EVENT_RECEIVED');
 

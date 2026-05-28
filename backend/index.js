@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import { createServer } from 'http'; // 🚀 Agregado para soportar Sockets sin romper Express
 import { Server } from 'socket.io';   // 🚀 Agregado para la comunicación en tiempo real
-import mongoose from 'mongoose';
 import webhookRoutes from './src/routes/webhookRoutes.js';
 import chatRoutes from './src/routes/chatRoutes.js'; // 🚀 Enlace de rutas de chat que agregamos antes
 import { dbConnect } from './src/config/db.js';
