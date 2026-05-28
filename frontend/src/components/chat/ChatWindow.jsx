@@ -1,9 +1,24 @@
-// frontend/src/components/ChatWindow.jsx
-import React from 'react';
+// frontend/src/components/chat/ChatWindow.jsx
+import React, { useState } from 'react';
 import { useChatStore } from '../../store/useChatStore.js';
 
 export const ChatWindow = () => {
-  const { activeChat } = useChatStore();
+  // 🚀 SOLUCIÓN SOCKETS: Usamos un selector explícito para suscribir los cambios del chat activo en tiempo real
+  const activeChat = useChatStore((state) => state.activeChat);
+  
+  // Estado local para controlar el input de texto
+  const [inputText, setInputText] = useState('');
+
+  // Manejador del envío del mensaje
+  const handleSend = (e) => {
+    e.preventDefault();
+    if (!inputText.trim()) return;
+
+    console.log('Mensaje listo para enviar:', inputText);
+    // TODO: Conectar con chatService.sendMessage más adelante
+    
+    setInputText(''); // Limpiamos el input
+  };
 
   if (!activeChat) {
     return (
@@ -22,7 +37,7 @@ export const ChatWindow = () => {
         {/* Cabecera */}
         <div className="pb-4 border-b border-adapt flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-dron-blue text-white flex items-center justify-center font-bold text-sm shadow-sm">
-            {activeChat.customerName.substring(0, 2).toUpperCase()}
+            {activeChat.customerName ? activeChat.customerName.substring(0, 2).toUpperCase() : 'WA'}
           </div>
           <div>
             <h4 className="font-bold text-slate-800 dark:text-white">{activeChat.customerName}</h4>
@@ -32,7 +47,7 @@ export const ChatWindow = () => {
 
         {/* Mensajes */}
         <div className="flex-1 my-4 overflow-y-auto flex flex-col gap-3 pr-2">
-          {activeChat.messages.map((msg, idx) => (
+          {activeChat.messages && activeChat.messages.map((msg, idx) => (
             <div 
               key={idx} 
               className={`max-w-[70%] p-3 rounded-2xl text-sm shadow-sm transition-all duration-300
@@ -46,17 +61,22 @@ export const ChatWindow = () => {
           ))}
         </div>
 
-        {/* Input */}
-        <div className="flex gap-2">
+        {/* Input Formulario */}
+        <form onSubmit={handleSend} className="flex gap-2">
           <input 
             type="text" 
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
             placeholder="Escribí una respuesta..." 
             className="flex-1 px-4 py-3 rounded-xl border border-adapt bg-white/50 dark:bg-slate-800/20 text-sm focus:outline-none focus:border-dron-blue dark:focus:border-dron-blue-light text-slate-800 dark:text-white"
           />
-          <button className="px-6 py-3 bg-dron-blue hover:bg-dron-blue-light text-white rounded-xl font-bold text-sm shadow-md transition-all duration-200">
+          <button 
+            type="submit"
+            className="px-6 py-3 bg-dron-blue hover:bg-dron-blue-light text-white rounded-xl font-bold text-sm shadow-md transition-all duration-200"
+          >
             Enviar
           </button>
-        </div>
+        </form>
       </div>
     </section>
   );

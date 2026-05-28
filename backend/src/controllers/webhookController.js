@@ -1,3 +1,4 @@
+// backend/src/controllers/webhookController.js
 import Chat from '../models/Chat.js'; 
 import Tenant from '../models/Tenant.js';
 
@@ -75,7 +76,7 @@ export const receiveMessage = async (req, res) => {
       console.log(`⚠️ No se encontró un Tenant con el ID ${metaPhoneNumberId}. Creando uno de prueba...`);
       tenant = await Tenant.create({
         name: "Tienda de Prueba Maury",
-        businessEmail: "prueba@maurydev.com", // Ponemos uno único por su restricción unique: true
+        businessEmail: "prueba@maurydev.com", // Ponemos uno único por su restriction unique: true
         plan: "free",
         status: "active",
         whatsappConfig: {
@@ -87,6 +88,13 @@ export const receiveMessage = async (req, res) => {
     }
 
     console.log(`💾 Guardando mensaje en el chat del Tenant: ${tenant.name} (_id: ${tenant._id})`);
+
+    // Armamos el objeto del mensaje formateando correctamente la fecha
+    const nuevoMensajeObj = {
+      sender: 'customer',
+      text: messageBody,
+      timestamp: timestamp ? new Date(parseInt(timestamp) * 1000) : new Date()
+    };
 
     // 4. Ahora sí, usamos el tenant._id que es un ObjectId real y válido de MongoDB
     const updatedChat = await Chat.findOneAndUpdate(
@@ -100,11 +108,7 @@ export const receiveMessage = async (req, res) => {
           status: 'bot_active' // Cambiado a tu enum por defecto del esquema
         },
         $push: {
-          messages: {
-            sender: 'customer',
-            text: messageBody,
-            timestamp: timestamp ? new Date(parseInt(timestamp) * 1000) : new Date()
-          }
+          messages: nuevoMensajeObj // <─── Pasamos el objeto limpio configurado arriba
         },
         $set: {
           updatedAt: new Date()
@@ -117,6 +121,19 @@ export const receiveMessage = async (req, res) => {
     );
 
     console.log(`✅ Registro guardado exitosamente en Mongo. Chat ID del sistema: ${updatedChat._id}`);
+
+    // 🚀 EMISIÓN DE WEBCOCKET EN TIEMPO REAL
+    // Rescatamos la instancia global de 'io' que dejamos colgada de la 'app' en index.js
+    const io = req.app.get('io');
+    if (io) {
+      console.log(`📡 Emitiendo newMessage vía Socket para tenant: ${tenant._id}`);
+      io.emit('newMessage', {
+        tenantId: tenant._id.toString(), // Convertimos el ObjectId a string plano para Zustand
+        customerPhone: customerPhone,
+        message: nuevoMensajeObj
+      });
+    }
+
     return res.status(200).send('EVENT_RECEIVED');
 
   } catch (error) {
