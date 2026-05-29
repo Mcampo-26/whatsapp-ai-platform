@@ -1,25 +1,30 @@
 // frontend/src/components/chat/ChatWindow.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useChatStore } from '../../store/useChatStore.js';
 
 export const ChatWindow = () => {
-  // Suscribimos el chat activo y la acción para despachar mensajes manuales del operador
   const activeChat = useChatStore((state) => state.activeChat);
   const sendMessage = useChatStore((state) => state.sendMessage);
+  const toggleBotStatus = useChatStore((state) => state.toggleBotStatus); // 🚀 Traemos la acción de conmutación
   
-  // Estado local para controlar el input de texto
   const [inputText, setInputText] = useState('');
+  const messagesEndRef = useRef(null);
 
-  // Manejador del envío del mensaje
+  // Auto-scroll automático cada vez que entran o se envían mensajes
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [activeChat?.messages?.length]);
+
   const handleSend = async (e) => {
     e.preventDefault();
     if (!inputText.trim() || !activeChat) return;
 
     const messageText = inputText.trim();
-    setInputText(''); // Limpiamos el input de inmediato para dar sensación de velocidad (UI Reactiva)
+    setInputText(''); 
 
     try {
-      // Despachamos la acción golpeando el backend con el ID del chat activo
       await sendMessage(activeChat._id, messageText);
       console.log('🚀 Mensaje del agente enviado con éxito:', messageText);
     } catch (error) {
@@ -38,25 +43,44 @@ export const ChatWindow = () => {
     );
   }
 
+  // 🚀 Evaluamos si el bot está activo según el esquema enum de tu MongoDB
+  const isBotActive = activeChat.status === 'bot_active';
+
   return (
     <section className="flex-1 h-[calc(100vh-6rem)] rounded-2xl glass-effect border-adapt p-6 flex flex-col justify-between">
       <div className="flex flex-col h-full justify-between">
-        {/* Cabecera */}
-        <div className="pb-4 border-b border-adapt flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-dron-blue text-white flex items-center justify-center font-bold text-sm shadow-sm">
-            {activeChat.customerName ? activeChat.customerName.substring(0, 2).toUpperCase() : 'WA'}
+        
+        {/* Cabecera Modificada con Switch Adaptativo */}
+        <div className="pb-4 border-b border-adapt flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-dron-blue text-white flex items-center justify-center font-bold text-sm shadow-sm">
+              {activeChat.customerName ? activeChat.customerName.substring(0, 2).toUpperCase() : 'WA'}
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-800 dark:text-white">{activeChat.customerName}</h4>
+              <span className="text-xs text-emerald-500 font-medium">Cliente</span>
+            </div>
           </div>
-          <div>
-            <h4 className="font-bold text-slate-800 dark:text-white">{activeChat.customerName}</h4>
-            <span className="text-xs text-emerald-500 font-medium">Cliente</span>
-          </div>
+
+          {/* 🤖 BOTÓN SWITCH INTERACTIVO */}
+          <button
+            onClick={() => toggleBotStatus(activeChat._id, activeChat.status)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-all duration-300 flex items-center gap-2 border select-none
+              ${isBotActive 
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20' 
+                : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20'
+              }`}
+          >
+            <span>{isBotActive ? '🤖 Asistente IA: Activo' : '👤 Control: Manual'}</span>
+            <div className={`w-2 h-2 rounded-full ${isBotActive ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+          </button>
         </div>
 
         {/* Mensajes */}
         <div className="flex-1 my-4 overflow-y-auto flex flex-col gap-3 pr-2">
           {activeChat.messages && activeChat.messages.map((msg, idx) => {
             const isCustomer = msg.sender === 'customer';
-            const isBot = msg.sender === 'ai'; // 🚀 Ajustado: Sincronizado con el rol 'ai' de tu MongoDB
+            const isBot = msg.sender === 'ai';
 
             return (
               <div 
@@ -66,7 +90,7 @@ export const ChatWindow = () => {
                     ? 'bg-white/80 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 self-start rounded-tl-none border border-adapt' 
                     : isBot
                       ? 'bg-blue-600/10 border border-dron-blue/20 text-slate-800 dark:text-slate-100 self-end rounded-tr-none'
-                      : 'bg-dron-blue text-white self-end rounded-tr-none' // Rol 'agent' (Operador)
+                      : 'bg-dron-blue text-white self-end rounded-tr-none'
                   }`}
               >
                 {isBot && (
@@ -78,6 +102,8 @@ export const ChatWindow = () => {
               </div>
             );
           })}
+          
+          <div ref={messagesEndRef} />
         </div>
 
         {/* Input Formulario */}

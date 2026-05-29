@@ -22,13 +22,24 @@ export const chatService = {
     }
   },
 
-  // 🚀 NUEVO ENDPOINT: Enviar una respuesta manual usando el ID único del chat
+  // Enviar una respuesta manual usando el ID único del chat
   sendMessageByAgent: async (chatId, text) => {
     try {
       const response = await api.post(`/api/chats/${chatId}/message`, { text });
       return response.data; // Devuelve el objeto del chat actualizado
     } catch (error) {
       console.error('Error en sendMessageByAgent:', error);
+      throw error;
+    }
+  },
+
+  // 🚀 NUEVO ENDPOINT: Conmutar el estado de la IA (Activo/Manual) en Atlas
+  toggleBot: async (chatId, status) => {
+    try {
+      const response = await api.patch(`/api/chats/${chatId}/toggle-bot`, { status });
+      return response.data; // Devuelve el objeto del chat con el status modificado
+    } catch (error) {
+      console.error('❌ Error en toggleBot (Service):', error);
       throw error;
     }
   },

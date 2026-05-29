@@ -1,7 +1,8 @@
 // backend/src/controllers/webhookController.js
 import Chat from '../models/Chat.js'; 
 import Tenant from '../models/Tenant.js';
-import { handleBotAutomationFlow } from '../services/botFlowService.js'; // 🚀 NUEVO SERVICE MODULAR
+import { handleBotAutomationFlow } from '../services/botFlowService.js'; // 🚀 Servicio modular de la IA
+import { getIO } from '../config/socket.js'; // 🚀 Importación limpia desde nuestro helper global
 
 /**
  * Verificación del Webhook (Método GET)
@@ -9,21 +10,17 @@ import { handleBotAutomationFlow } from '../services/botFlowService.js'; // 🚀
  */
 export const verifyWebhook = async (req, res) => {
   try {
-    // Meta manda estos parámetros en la Query String
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
 
-    // El token secreto que nosotros elegimos (lo vamos a poner en el .env)
     const MY_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || 'mi_token_secreto_vip';
 
     if (mode && token) {
       if (mode === 'subscribe' && token === MY_VERIFY_TOKEN) {
         console.log('✅ WEBHOOK_VERIFIED: ¡Conexión con Meta exitosa!');
-        // Respondemos con el challenge que nos mandaron para confirmar
         return res.status(200).send(challenge);
       } else {
-        // Si el token no coincide, se rechaza
         console.log('❌ WEBHOOK_REFUSED: El token de verificación no coincide.');
         return res.sendStatus(403);
       }
@@ -36,7 +33,7 @@ export const verifyWebhook = async (req, res) => {
 
 /**
  * Recepción de Mensajes de WhatsApp (Método POST)
- * Meta nos dispara un POST acá cada vez que un cliente envía un mensaje.
+ * Meta nos dispara un POST acá cada vez que un cliente envía un mensaje o responde Gemini.
  */
 export const receiveMessage = async (req, res) => {
   try {
@@ -63,21 +60,17 @@ export const receiveMessage = async (req, res) => {
     const messageId = messageData.id;
     const timestamp = messageData.timestamp;
 
-    // 2. Capturamos el ID de teléfono que Meta nos envía en el JSON
     const metaPhoneNumberId = value?.metadata?.phone_number_id;
 
     console.log(`🔍 Buscando a qué comercio pertenece el ID de WhatsApp: ${metaPhoneNumberId}...`);
 
-    // 3. Buscamos en la colección de Tenants cuál coincide con ese phoneNumberId
     let tenant = await Tenant.findOne({ 'whatsappConfig.phoneNumberId': metaPhoneNumberId });
 
-    // PLAN B PARA PRUEBAS: Si no encontrás ningún Tenant en tu base de datos todavía,
-    // creamos uno rápido al vuelo para que no tire el error de ObjectId y la app no se clave.
     if (!tenant) {
       console.log(`⚠️ No se encontró un Tenant con el ID ${metaPhoneNumberId}. Creando uno de prueba...`);
       tenant = await Tenant.create({
         name: "Tienda de Prueba Maury",
-        businessEmail: "prueba@maurydev.com", // Ponemos uno único por su restriction unique: true
+        businessEmail: "prueba@maurydev.com",
         plan: "free",
         status: "active",
         whatsappConfig: {
@@ -97,26 +90,25 @@ export const receiveMessage = async (req, res) => {
       timestamp: timestamp ? new Date(parseInt(timestamp) * 1000) : new Date()
     };
 
-    // 4. Ahora sí, usamos el tenant._id que es un ObjectId real y válido de MongoDB
     const updatedChat = await Chat.findOneAndUpdate(
       { 
-        tenantId: tenant._id, // <─── Usamos el ID correcto del documento encontrado
+        tenantId: tenant._id, 
         customerPhone: customerPhone 
       },
       {
         $setOnInsert: {
           customerName: customerName,
-          status: 'bot_active' // Cambiado a tu enum por defecto del esquema
+          status: 'bot_active'
         },
         $push: {
-          messages: nuevoMensajeObj // <─── Pasamos el objeto limpio configurado arriba
+          messages: nuevoMensajeObj
         },
         $set: {
           updatedAt: new Date()
         }
       },
       { 
-        returnDocument: 'after', // <─── Esto reemplaza al 'new: true' en las versiones Crypto/Mongo modernas
+        returnDocument: 'after', 
         upsert: true 
       }
     );
@@ -124,20 +116,27 @@ export const receiveMessage = async (req, res) => {
     console.log(`✅ Registro guardado exitosamente en Mongo. Chat ID del sistema: ${updatedChat._id}`);
 
     // 🚀 EMISIÓN DE WEBCOCKET EN TIEMPO REAL (Mensaje del Cliente)
-    const io = req.app.get('io');
+    const io = getIO();
+    const tenantString = tenant._id.toString();
+
     if (io) {
-      console.log(`📡 Emitiendo newMessage vía Socket para tenant: ${tenant._id}`);
-      io.emit('newMessage', {
-        tenantId: tenant._id.toString(),
+      console.log(`📡 Emitiendo newMessage vía Socket para tenant: ${tenantString}`);
+      io.to(tenantString).emit('newMessage', {
+        tenantId: tenantString,
         customerPhone: customerPhone,
+        chatId: updatedChat._id,
         message: nuevoMensajeObj
       });
     }
 
-    // 🧠 DISPARO DEL FLUJO DE INTELIGENCIA ARTIFICIAL DE FORMA PASIVA
-    // Al no usar un 'await' acá, el controlador le responde de inmediato 200 OK a Meta, 
-    // y la IA se procesa de fondo en un hilo secundario de forma súper veloz. ¡Arquitectura de nivel senior!
-    handleBotAutomationFlow(io, tenant, customerPhone, messageBody);
+    // 🧠 CANDADO DE IA INTERACTIVO: Evaluamos el status actual devuelto por Atlas antes de procesar Gemini
+    if (updatedChat && updatedChat.status === 'agent_active') {
+      console.log(`🛑 [BotFlow] Automatización omitida: El operador tiene el control manual para el cliente ${customerPhone}.`);
+    } else {
+      // 🤖 Si no está en modo manual, dejamos pasar libremente el flujo de automatización en segundo plano
+      console.log(`🧠 [BotFlow] Iniciando automatización de IA con Gemini para ${tenant.name}...`);
+      handleBotAutomationFlow(io, tenant, customerPhone, messageBody);
+    }
 
     return res.status(200).send('EVENT_RECEIVED');
 

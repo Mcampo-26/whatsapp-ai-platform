@@ -41,13 +41,16 @@ export const sendMessageByAgent = async (req, res) => {
       return res.status(404).json({ message: 'Chat no encontrado' });
     }
 
-    // 2. Emisión en tiempo real usando el Helper global desvinculado de HTTP
+    // 2. Emisión en tiempo real unificada con la estructura de la UI
     const io = getIO();
     const tenantString = updatedChat.tenantId.toString();
     
-    console.log(`📡 Operador envió mensaje. Emitiendo agentMessage vía Socket para tenant: ${tenantString}`);
+    console.log(`📡 Operador envió mensaje. Emitiendo newMessage vía Socket para tenant: ${tenantString}`);
     
+    // 🚀 ACÁ ESTÁ EL CAMBIO: Enviamos toda la metadata que el dashboard y Zustand esperan evaluar
     io.to(tenantString).emit('newMessage', {
+      tenantId: tenantString,
+      customerPhone: updatedChat.customerPhone,
       chatId: updatedChat._id,
       message: updatedChat.messages[updatedChat.messages.length - 1]
     });
@@ -57,5 +60,41 @@ export const sendMessageByAgent = async (req, res) => {
   } catch (error) {
     console.error('❌ Error en sendMessageByAgent:', error);
     return res.status(500).json({ message: 'Error interno al enviar el mensaje del agente' });
+  }
+};
+export const toggleChatBotStatus = async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const { status } = req.body; // Esperamos 'bot_active' o 'agent_active'
+
+    if (!['bot_active', 'agent_active'].includes(status)) {
+      return res.status(400).json({ message: 'Estado de bot inválido' });
+    }
+
+    const updatedChat = await Chat.findByIdAndUpdate(
+      chatId,
+      { $set: { status, updatedAt: new Date() } },
+      { returnDocument: 'after' }
+    );
+
+    if (!updatedChat) {
+      return res.status(404).json({ message: 'Chat no encontrado' });
+    }
+
+    // Emitimos el cambio de estado por Socket a la sala del Tenant
+    const io = getIO();
+    const tenantString = updatedChat.tenantId.toString();
+    
+    console.log(`📡 Estado del Bot modificado a [${status}] para el chat: ${chatId}`);
+    
+    io.to(tenantString).emit('chatStatusChanged', {
+      chatId: updatedChat._id,
+      status: updatedChat.status
+    });
+
+    return res.status(200).json(updatedChat);
+  } catch (error) {
+    console.error('❌ Error en toggleChatBotStatus:', error);
+    return res.status(500).json({ message: 'Error al cambiar el estado del bot' });
   }
 };
