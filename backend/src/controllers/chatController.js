@@ -34,7 +34,7 @@ export const sendMessageByAgent = async (req, res) => {
           }
         }
       },
-      { new: true }
+      { returnDocument: 'after' } // 🚀 Reemplazado para silenciar el warning de Mongoose
     );
 
     if (!updatedChat) {
