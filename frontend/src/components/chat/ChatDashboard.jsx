@@ -3,21 +3,19 @@ import React, { useEffect } from 'react';
 import { ChatList } from './ChatList.jsx';
 import { ChatWindow } from './ChatWindow.jsx';
 import { useChatStore } from '../../store/useChatStore.js';
-import { io } from 'socket.io-client'; // 🚀 Agregado: Cliente de Socket.io para escuchar el canal
-import { API_URL } from '../../config/config.js'; // 🚀 Agregado: Para saber a qué dirección conectarse
+import { socketService } from '../../services/socketService.js'; // 🚀 Reemplazamos io crudo por nuestro helper centralizado
 
 export const ChatDashboard = () => {
-  // 🚀 SOLUCIÓN: Usamos selectores explícitos para asegurarnos de que Zustand devuelva la función correctamente
   const fetchChats = useChatStore((state) => state.fetchChats);
-  const addMessageToChat = useChatStore((state) => state.addMessageToChat); // 🚀 Agregado: Acción para inyectar mensajes en caliente
+  const addMessageToChat = useChatStore((state) => state.addMessageToChat);
   const loading = useChatStore((state) => state.loading);
   const error = useChatStore((state) => state.error);
   
   // ID real del Tenant correspondiente a "Tienda de Prueba Maury"
   const currentTenantId = "6a16e86bbdc9dd4ad1824c67";
 
+  // 1. Carga inicial de los chats desde MongoDB Atlas
   useEffect(() => {
-    // Verificamos que exista la función antes de patear la petición
     if (typeof fetchChats === 'function') {
       fetchChats(currentTenantId);
     } else {
@@ -25,28 +23,35 @@ export const ChatDashboard = () => {
     }
   }, [fetchChats]);
 
-  // 🚀 NUEVO: useEffect dedicado a mantener viva la escucha del socket en tiempo real
+  // 2. 📡 NUEVO: Conexión limpia y estable al Socket sin reconexiones infinitas
   useEffect(() => {
-    // Abrimos la conexión con el servidor backend usando tu API_URL (http://localhost:5000)
-    const socket = io(API_URL);
+    // Inicializamos la conexión única del socket mediante el helper
+    socketService.connect();
 
-    // Escuchamos el evento global 'newMessage' que emite el backend
-    socket.on('newMessage', (data) => {
+    // Metemos al operador en la sala exclusiva de este tenant para escuchar sus mensajes
+    socketService.joinTenantRoom(currentTenantId);
+
+    // Handler de recepción de mensajes en tiempo real
+    const handleIncomingMessage = (data) => {
       console.log('📡 Mensaje recibido por socket en tiempo real:', data);
       
+      // Desestructuramos los campos que emite tu backend
       const { tenantId, customerPhone, message } = data;
       
-      // Si existe la función en Zustand, empujamos el mensaje directo a la UI
-      if (typeof addMessageToChat === 'function') {
-        addMessageToChat(tenantId, customerPhone, message);
+      // Si existe la función en Zustand y tenemos la data, inyectamos en caliente a la UI
+      if (typeof addMessageToChat === 'function' && message) {
+        addMessageToChat(tenantId || currentTenantId, customerPhone, message);
       }
-    });
-
-    // Limpieza: Desconectamos el socket al desmontar el componente para evitar duplicación de listeners
-    return () => {
-      socket.disconnect();
     };
-  }, [addMessageToChat]);
+
+    // Escuchamos el evento global
+    socketService.on('newMessage', handleIncomingMessage);
+
+    // 🧼 Limpieza: Apagamos el listener al desmontar el módulo, PERO no destruimos la conexión
+    return () => {
+      socketService.off('newMessage', handleIncomingMessage);
+    };
+  }, [addMessageToChat]); // Ahora que usa socketService, el listener queda blindado contra renders accidentales
 
   if (loading) {
     return (

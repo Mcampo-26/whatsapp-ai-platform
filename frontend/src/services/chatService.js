@@ -14,7 +14,6 @@ export const chatService = {
   // Obtener todos los chats del inquilino (Tenant) desde MongoDB
   getChatsByTenant: async (tenantId) => {
     try {
-      // Reemplazar por tu ruta real del backend (ej: /api/chats/${tenantId})
       const response = await api.get(`/api/chats/tenant/${tenantId}`);
       return response.data;
     } catch (error) {
@@ -23,7 +22,18 @@ export const chatService = {
     }
   },
 
-  // Enviar una respuesta manual desde el panel hacia el backend
+  // 🚀 NUEVO ENDPOINT: Enviar una respuesta manual usando el ID único del chat
+  sendMessageByAgent: async (chatId, text) => {
+    try {
+      const response = await api.post(`/api/chats/${chatId}/message`, { text });
+      return response.data; // Devuelve el objeto del chat actualizado
+    } catch (error) {
+      console.error('Error en sendMessageByAgent:', error);
+      throw error;
+    }
+  },
+
+  // Enviar una respuesta manual desde el panel (Mantenido por compatibilidad si se requiere)
   sendMessage: async (tenantId, customerPhone, text) => {
     try {
       const response = await api.post('/api/chats/send', {

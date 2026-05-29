@@ -3,21 +3,28 @@ import React, { useState } from 'react';
 import { useChatStore } from '../../store/useChatStore.js';
 
 export const ChatWindow = () => {
-  // 🚀 SOLUCIÓN SOCKETS: Usamos un selector explícito para suscribir los cambios del chat activo en tiempo real
+  // Suscribimos el chat activo y la acción para despachar mensajes manuales del operador
   const activeChat = useChatStore((state) => state.activeChat);
+  const sendMessage = useChatStore((state) => state.sendMessage);
   
   // Estado local para controlar el input de texto
   const [inputText, setInputText] = useState('');
 
   // Manejador del envío del mensaje
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    if (!inputText.trim() || !activeChat) return;
 
-    console.log('Mensaje listo para enviar:', inputText);
-    // TODO: Conectar con chatService.sendMessage más adelante
-    
-    setInputText(''); // Limpiamos el input
+    const messageText = inputText.trim();
+    setInputText(''); // Limpiamos el input de inmediato para dar sensación de velocidad (UI Reactiva)
+
+    try {
+      // Despachamos la acción golpeando el backend con el ID del chat activo
+      await sendMessage(activeChat._id, messageText);
+      console.log('🚀 Mensaje del agente enviado con éxito:', messageText);
+    } catch (error) {
+      console.error('❌ Falló el envío del mensaje del agente en la UI:', error);
+    }
   };
 
   if (!activeChat) {
@@ -49,7 +56,7 @@ export const ChatWindow = () => {
         <div className="flex-1 my-4 overflow-y-auto flex flex-col gap-3 pr-2">
           {activeChat.messages && activeChat.messages.map((msg, idx) => {
             const isCustomer = msg.sender === 'customer';
-            const isBot = msg.sender === 'bot';
+            const isBot = msg.sender === 'ai'; // 🚀 Ajustado: Sincronizado con el rol 'ai' de tu MongoDB
 
             return (
               <div 
@@ -59,7 +66,7 @@ export const ChatWindow = () => {
                     ? 'bg-white/80 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 self-start rounded-tl-none border border-adapt' 
                     : isBot
                       ? 'bg-blue-600/10 border border-dron-blue/20 text-slate-800 dark:text-slate-100 self-end rounded-tr-none'
-                      : 'bg-dron-blue text-white self-end rounded-tr-none'
+                      : 'bg-dron-blue text-white self-end rounded-tr-none' // Rol 'agent' (Operador)
                   }`}
               >
                 {isBot && (
@@ -72,6 +79,7 @@ export const ChatWindow = () => {
             );
           })}
         </div>
+
         {/* Input Formulario */}
         <form onSubmit={handleSend} className="flex gap-2">
           <input 
